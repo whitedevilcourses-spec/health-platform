@@ -135,7 +135,7 @@ export function AssessmentForm() {
     "Preparing your summary..."
   ];
 
-  const { register, handleSubmit, control, formState: { errors, isValid }, trigger } = useForm<AssessmentData>({
+  const { register, handleSubmit, control, formState: { errors, isValid }, trigger, getValues, setValue } = useForm<AssessmentData>({
     resolver: zodResolver(assessmentSchema),
     mode: "onChange",
     defaultValues: {
@@ -329,16 +329,26 @@ export function AssessmentForm() {
 
             <div className="grid gap-3">
               {result.options?.map((option: string, index: number) => (
-                <div
+                <button
                   key={index}
-                  className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm text-foreground"
+                  type="button"
+                  onClick={() => {
+                    const currentData = getValues();
+                    currentData.symptoms = `${currentData.symptoms}\n\nAdditional Detail: ${option}`;
+                    setValue("symptoms", currentData.symptoms);
+                    onSubmit(currentData);
+                  }}
+                  className="rounded-2xl border border-border/60 bg-background/60 px-4 py-3 text-sm text-foreground text-left hover:bg-primary/10 hover:border-primary/50 transition-colors font-medium"
                 >
                   {option}
-                </div>
+                </button>
               ))}
             </div>
 
-            <Button size="lg" variant="outline" className="rounded-xl" onClick={() => window.location.reload()}>
+            <Button size="lg" variant="outline" className="rounded-xl" onClick={() => {
+              setResult(null);
+              setCurrentStep(1); // Go back to symptoms step
+            }}>
               Start a More Detailed Assessment
             </Button>
           </CardContent>
