@@ -211,8 +211,10 @@ export async function POST(request: Request) {
       .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
       .join("\n");
 
-    const aiResult = hasConfiguredAiProvider()
-      ? await generateStructuredJson<{
+    let aiResult;
+    if (hasConfiguredAiProvider()) {
+      try {
+        aiResult = await generateStructuredJson<{
           type: "report";
           triage_summary: string;
           symptom_clusters: Array<{ cluster: string; detail: string }>;
@@ -234,8 +236,14 @@ export async function POST(request: Request) {
         }>(
           "You are a clinical triage assistant. Return only JSON with keys: type, triage_summary, symptom_clusters, clinical_considerations, risk, specialists, immediate_actions, emergency_signs, followup_timeline, disclaimer. Set type to 'report'.",
           combinedHistory
-        )
-      : buildChatFallback(messages);
+        );
+      } catch (error) {
+        console.error("AI generation failed for chat final report, falling back to mock:", error);
+        aiResult = buildChatFallback(messages);
+      }
+    } else {
+      aiResult = buildChatFallback(messages);
+    }
 
     const recommendedHospitals = await searchPublicHospitalsFromFirestore({
       department: aiResult.specialists.primary,

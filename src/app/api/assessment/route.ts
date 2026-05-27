@@ -197,8 +197,10 @@ export async function POST(request: Request) {
       });
     }
 
-    const aiResult = hasConfiguredAiProvider()
-      ? await generateStructuredJson<{
+    let aiResult;
+    if (hasConfiguredAiProvider()) {
+      try {
+        aiResult = await generateStructuredJson<{
           urgencyLevel: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
           clinicalSummary: string;
           symptomCorrelation: string[];
@@ -221,8 +223,14 @@ export async function POST(request: Request) {
           Additional notes: ${input.additionalNotes || "None provided"}
           Location: ${input.location}
           `
-        )
-      : buildAssessmentFallback(input);
+        );
+      } catch (error) {
+        console.error("AI generation failed for assessment final report, falling back to mock:", error);
+        aiResult = buildAssessmentFallback(input);
+      }
+    } else {
+      aiResult = buildAssessmentFallback(input);
+    }
 
     const [doctorsResult, hospitalsResult] = await Promise.allSettled([
       searchPublicDoctorsFromFirestore({
