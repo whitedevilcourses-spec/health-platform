@@ -1,0 +1,164 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userRole() {
+      return signedIn() && userDoc().exists() ? userDoc().data.role : null;
+    }
+
+    function isAdmin() {
+      return userRole() == "admin";
+    }
+
+    function isDoctor() {
+      return userRole() == "doctor";
+    }
+
+    function isPatient() {
+      return userRole() == "patient";
+    }
+
+    function isHospitalManager() {
+      return userRole() == "manager" || userRole() == "hospital_manager";
+    }
+
+    function isEmergencyOperator() {
+      return userRole() == "emergency_operator";
+    }
+
+    function isSupportStaff() {
+      return userRole() == "support_staff";
+    }
+
+    function ownsProfile(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if ownsProfile(uid) || isAdmin() || isSupportStaff();
+      allow create: if ownsProfile(uid);
+      allow update: if ownsProfile(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /patients/{patientId} {
+      allow read: if ownsProfile(patientId) || isAdmin() || isSupportStaff();
+      allow create, update: if ownsProfile(patientId) || isAdmin() || isSupportStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /doctors/{doctorId} {
+      allow read: if true;
+      allow create, update: if ownsProfile(doctorId) || isAdmin() || isHospitalManager();
+      allow delete: if isAdmin();
+    }
+
+    match /hospitals/{hospitalId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || isHospitalManager();
+      allow delete: if isAdmin();
+    }
+
+    match /departments/{departmentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isHospitalManager();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.patientId == request.auth.uid)
+        || (signedIn() && resource.data.doctorId == request.auth.uid)
+        || isHospitalManager()
+        || isSupportStaff();
+      allow create: if signedIn()
+        && request.resource.data.patientEmail == request.auth.token.email
+        && request.resource.data.patientId == request.auth.uid;
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.doctorId == request.auth.uid)
+        || (signedIn() && resource.data.patientId == request.auth.uid)
+        || isHospitalManager();
+      allow delete: if isAdmin();
+    }
+
+    match /slots/{slotId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || isDoctor() || isHospitalManager() || isSupportStaff();
+      allow delete: if isAdmin() || isHospitalManager();
+    }
+
+    match /aiSessions/{sessionId} {
+      allow read, update: if isAdmin()
+        || (signedIn() && resource.data.patientId == request.auth.uid)
+        || (signedIn() && request.resource.data.patientId == request.auth.uid)
+        || isDoctor()
+        || isSupportStaff();
+      allow create: if signedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /chatMessages/{messageId} {
+      allow read: if isAdmin() || isDoctor() || isSupportStaff();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAdmin()
+        || (signedIn() && request.auth.uid in resource.data.targetUserIds)
+        || isSupportStaff();
+      allow create, update: if isAdmin() || isHospitalManager() || isSupportStaff() || isDoctor();
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.patientId == request.auth.uid)
+        || (signedIn() && resource.data.doctorId == request.auth.uid);
+      allow create, update: if isAdmin() || isDoctor();
+      allow delete: if isAdmin();
+    }
+
+    match /prescriptions/{prescriptionId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.patientId == request.auth.uid)
+        || (signedIn() && resource.data.doctorId == request.auth.uid);
+      allow create, update: if isAdmin() || isDoctor();
+      allow delete: if isAdmin();
+    }
+
+    match /emergencyRequests/{requestId} {
+      allow read: if isAdmin() || isEmergencyOperator() || isSupportStaff()
+        || (signedIn() && resource.data.patientId == request.auth.uid);
+      allow create: if signedIn();
+      allow update: if isAdmin() || isEmergencyOperator() || isSupportStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.patientEmail == request.auth.token.email)
+        || isSupportStaff();
+      allow create, update: if isAdmin() || isSupportStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    match /telemetry/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isHospitalManager() || isEmergencyOperator();
+    }
+  }
+}
