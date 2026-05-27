@@ -39,7 +39,7 @@ function buildFollowUpQuestion(symptoms: string) {
     };
   }
 
-  if (lower.includes("chest")) {
+  if (lower.includes("chest") || lower.includes("heart")) {
     return {
       question:
         "Is the discomfort pressure-like, sharp, or burning, does it spread to the arm, jaw, or back, and are you short of breath, sweaty, dizzy, or nauseated?",
@@ -47,6 +47,45 @@ function buildFollowUpQuestion(symptoms: string) {
         "Pressure / tightness / sharp / burning",
         "Radiation to arm, jaw, shoulder, or back",
         "Shortness of breath, sweating, dizziness, nausea",
+      ],
+    };
+  }
+
+  if (lower.includes("back") || lower.includes("spine")) {
+    return {
+      question:
+        "Are you experiencing any radiating pain, numbness, tingling, or weakness in your legs, or any loss of bladder control?",
+      options: [
+        "Pain shooting down the leg",
+        "Numbness or tingling in legs",
+        "Loss of bladder or bowel control",
+        "Fever or recent injury",
+      ],
+    };
+  }
+
+  if (lower.includes("stomach") || lower.includes("abdom") || lower.includes("belly") || lower.includes("pain")) {
+    return {
+      question:
+        "Where exactly is the pain located, is it sharp or cramping, and are you experiencing vomiting, fever, or diarrhea?",
+      options: [
+        "Upper abdomen / heartburn-like",
+        "Lower right side / sharp",
+        "Cramping all over",
+        "Accompanied by fever or vomiting",
+      ],
+    };
+  }
+
+  if (lower.includes("skin") || lower.includes("rash") || lower.includes("itch")) {
+    return {
+      question:
+        "Is the rash spreading rapidly, painful, or blistering, and do you have any facial swelling or difficulty breathing?",
+      options: [
+        "Swelling of the face or lips",
+        "Difficulty breathing or swallowing",
+        "Spreading rapidly or blistering",
+        "Accompanied by fever",
       ],
     };
   }

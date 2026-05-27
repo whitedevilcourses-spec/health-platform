@@ -39,7 +39,7 @@ function buildQuestion(message: string) {
     };
   }
 
-  if (lower.includes("chest")) {
+  if (lower.includes("chest") || lower.includes("heart")) {
     return {
       type: "question" as const,
       question_type: "chips" as const,
@@ -57,10 +57,64 @@ function buildQuestion(message: string) {
     };
   }
 
+  if (lower.includes("back") || lower.includes("spine")) {
+    return {
+      type: "question" as const,
+      question_type: "multi" as const,
+      question: "Are you experiencing any of these other symptoms with your back pain?",
+      options: [
+        "Pain shooting down the leg",
+        "Numbness or tingling",
+        "Loss of bladder/bowel control",
+        "Fever",
+        "Recent injury or fall",
+      ],
+      step_number: 1,
+      total_steps: 2,
+      insight: "Identifying nerve compression or red flags like fever helps triage back pain effectively.",
+    };
+  }
+
+  if (lower.includes("stomach") || lower.includes("abdom") || lower.includes("belly") || lower.includes("pain")) {
+    return {
+      type: "question" as const,
+      question_type: "chips" as const,
+      question: "Where exactly is the pain located and how does it feel?",
+      options: [
+        "Upper abdomen / heartburn",
+        "Lower right side",
+        "Cramping all over",
+        "Sharp and sudden",
+        "Constant and worsening",
+      ],
+      step_number: 1,
+      total_steps: 2,
+      insight: "Location and onset help differentiate between minor gastric issues and surgical emergencies like appendicitis.",
+    };
+  }
+
+  if (lower.includes("skin") || lower.includes("rash") || lower.includes("itch")) {
+    return {
+      type: "question" as const,
+      question_type: "multi" as const,
+      question: "Are you having any of these associated symptoms with the skin issue?",
+      options: [
+        "Swelling of the face or lips",
+        "Difficulty breathing",
+        "Fever",
+        "Spreading rapidly",
+        "Painful or blistering",
+      ],
+      step_number: 1,
+      total_steps: 2,
+      insight: "Checking for anaphylaxis or severe infection is critical for skin presentations.",
+    };
+  }
+
   return {
     type: "question" as const,
     question_type: "multi" as const,
-    question: "Which of these are happening along with the main symptom?",
+    question: "Which of these are happening along with your main symptom?",
     options: ["Fever", "Nausea or vomiting", "Dizziness", "Shortness of breath", "Weakness or numbness"],
     step_number: 1,
     total_steps: 2,
