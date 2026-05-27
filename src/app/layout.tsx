@@ -6,6 +6,7 @@ import { RealtimeProvider } from "@/lib/realtime-context";
 import { Header } from "@/components/Header";
 import { FeedbackProvider } from "@/components/providers/feedback-provider";
 import Script from 'next/script';
+import { Analytics } from "@vercel/analytics/next";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -42,6 +43,7 @@ export default function RootLayout({
             <FloatingChat />
           </FeedbackProvider>
         </RealtimeProvider>
+        <Analytics />
       </body>
     </html>
   );
