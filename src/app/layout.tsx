@@ -5,7 +5,7 @@ import { FloatingChat } from "@/components/chat/FloatingChat";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Header } from "@/components/Header";
 import { FeedbackProvider } from "@/components/providers/feedback-provider";
-
+import Script from 'next/script';
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -33,7 +33,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <RealtimeProvider>
-          <FeedbackProvider>
+          <Script src="https://cdn.vercel-insights.com/v1/script.js" strategy="lazyOnload" />
+            <FeedbackProvider>
             <Header />
             <div className="flex-1">
               {children}
