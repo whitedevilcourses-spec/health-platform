@@ -169,52 +169,51 @@ export default function DoctorDashboardPage() {
         updatedAt: serverTimestamp(),
       });
 
-      try {
-        await fetch("/api/send-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: activeConsultation.patientEmail,
-            subject: "Verified Digital Prescription Record",
-            type: "prescription",
-            html: `
-              <div style="padding: 12px 0;">
-                <p style="font-size: 15px; font-weight: bold; margin: 0 0 12px 0; color: #0f172a;">Digital Medical Record & Prescriptions</p>
-                <p style="font-size: 13px; color: #4b5563; margin-bottom: 16px;">Your telehealth session with <strong>${doctorProfile?.name || "your doctor"}</strong> has concluded. Here is your compiled, E2E-shielded clinical prescription record:</p>
-                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                  <span style="font-size: 9px; color: #94a3b8; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Clinical Diagnostics Notes</span>
-                  <p style="font-size: 12px; color: #334155; margin: 0; font-weight: 600;">${clinicalNotes}</p>
-                </div>
-                <div style="background-color: #e0f2fe; border: 1px solid #bae6fd; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
-                  <span style="font-size: 9px; color: #0284c7; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Rx Guidelines</span>
-                  <p style="font-size: 13px; color: #0369a1; font-family: monospace; font-weight: bold; margin: 0;">${prescriptionText}</p>
-                </div>
+      // Fire and forget the email so we don't block the UI if SMTP is slow
+      fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: activeConsultation.patientEmail,
+          subject: "Verified Digital Prescription Record",
+          type: "prescription",
+          html: `
+            <div style="padding: 12px 0;">
+              <p style="font-size: 15px; font-weight: bold; margin: 0 0 12px 0; color: #0f172a;">Digital Medical Record & Prescriptions</p>
+              <p style="font-size: 13px; color: #4b5563; margin-bottom: 16px;">Your telehealth session with <strong>${doctorProfile?.name || "your doctor"}</strong> has concluded. Here is your compiled, E2E-shielded clinical prescription record:</p>
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                <span style="font-size: 9px; color: #94a3b8; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Clinical Diagnostics Notes</span>
+                <p style="font-size: 12px; color: #334155; margin: 0; font-weight: 600;">${clinicalNotes}</p>
               </div>
-            `,
-          }),
-        }).then(async (emailRes) => {
-          const emailData = await emailRes.json();
-          if (emailRes.ok && emailData.previewUrl) {
-            showFeedback({
-              tone: "success",
-              title: "Prescription dispatched",
-              message: `The digital prescription and consultation summary were emailed to ${activeConsultation.patientEmail}.`,
-              primaryAction: {
-                label: "Open preview inbox",
-                onClick: () => {
-                  window.open(emailData.previewUrl, "_blank", "noopener,noreferrer");
-                },
+              <div style="background-color: #e0f2fe; border: 1px solid #bae6fd; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                <span style="font-size: 9px; color: #0284c7; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 4px;">Rx Guidelines</span>
+                <p style="font-size: 13px; color: #0369a1; font-family: monospace; font-weight: bold; margin: 0;">${prescriptionText}</p>
+              </div>
+            </div>
+          `,
+        }),
+      }).then(async (emailRes) => {
+        const emailData = await emailRes.json();
+        if (emailRes.ok && emailData.previewUrl) {
+          showFeedback({
+            tone: "success",
+            title: "Prescription dispatched",
+            message: `The digital prescription and consultation summary were emailed to ${activeConsultation.patientEmail}.`,
+            primaryAction: {
+              label: "Open preview inbox",
+              onClick: () => {
+                window.open(emailData.previewUrl, "_blank", "noopener,noreferrer");
               },
-              secondaryAction: {
-                label: "Done",
-                variant: "outline",
-              },
-            });
-          }
-        });
-      } catch (emailErr) {
+            },
+            secondaryAction: {
+              label: "Done",
+              variant: "outline",
+            },
+          });
+        }
+      }).catch((emailErr) => {
         console.error("Prescription email failed:", emailErr);
-      }
+      });
 
       setConsultSuccess(true);
     } catch (err) {
@@ -443,19 +442,29 @@ export default function DoctorDashboardPage() {
                           </div>
                         </div>
 
-                        <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-border/40 pt-4 sm:pt-0 gap-3 shrink-0">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground/80">
-                            <Clock className="w-3.5 h-3.5 text-primary" />
-                            <span>Slot: {patient.time}</span>
+                          <div className="flex sm:flex-col items-start sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-border/40 pt-4 sm:pt-0 gap-3 shrink-0">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground/80">
+                              <Clock className="w-3.5 h-3.5 text-primary" />
+                              <span>Slot: {patient.time}</span>
+                            </div>
+                            <Button
+                              onClick={() => handleStartConsult(patient)}
+                              size="sm"
+                              className={cn(
+                                "rounded-xl text-xs font-bold flex items-center gap-1.5",
+                                patient.consultationType === "in_person"
+                                  ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                  : "bg-primary hover:bg-primary/95 text-white"
+                              )}
+                            >
+                              {patient.consultationType === "in_person" ? (
+                                <User className="w-3.5 h-3.5" />
+                              ) : (
+                                <Video className="w-3.5 h-3.5" />
+                              )}
+                              Start Consult
+                            </Button>
                           </div>
-                          <Button
-                            onClick={() => handleStartConsult(patient)}
-                            size="sm"
-                            className="rounded-xl text-xs font-bold bg-primary hover:bg-primary/95 text-white flex items-center gap-1.5"
-                          >
-                            <Video className="w-3.5 h-3.5" /> Start Consult
-                          </Button>
-                        </div>
                       </CardContent>
                     </Card>
                   ))}
@@ -636,27 +645,43 @@ export default function DoctorDashboardPage() {
               ) : (
                 <form onSubmit={handleFinishConsult} className="space-y-6">
                   <div className="space-y-2">
-                    <Badge className="bg-primary/10 border-primary/20 text-primary font-bold uppercase tracking-widest">Active Consultation</Badge>
-                    <h3 className="text-2xl font-black text-foreground tracking-tight leading-tight">Virtual Triage Room</h3>
+                    <Badge className="bg-primary/10 border-primary/20 text-primary font-bold uppercase tracking-widest">
+                      {activeConsultation.consultationType === "in_person" ? "In-Person Consultation" : "Virtual Consultation"}
+                    </Badge>
+                    <h3 className="text-2xl font-black text-foreground tracking-tight leading-tight">
+                      {activeConsultation.consultationType === "in_person" ? "Clinic Room" : "Virtual Triage Room"}
+                    </h3>
                     <p className="text-xs text-muted-foreground font-semibold">
                       Patient: {activeConsultation.name} ({activeConsultation.age}yo)
                     </p>
                   </div>
 
-                  <div className="h-44 w-full bg-zinc-950 border border-zinc-800 rounded-2xl flex flex-col justify-between p-4 relative overflow-hidden text-white">
-                    <div className="flex justify-between items-center relative z-10 w-full">
-                      <span className="text-[8px] bg-red-500 text-white font-extrabold tracking-widest px-1.5 py-0.5 rounded uppercase">Secure Video Link</span>
-                      <span className="text-[8px] text-white/80 font-bold bg-zinc-800/80 border border-white/10 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <Laptop className="w-3 h-3 text-primary animate-pulse" /> E2E Encrypted
-                      </span>
-                    </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 pointer-events-none">
-                      <div className="w-12 h-12 bg-primary/20 rounded-full border border-primary flex items-center justify-center animate-pulse">
-                        <User className="w-5 h-5 text-primary" />
+                  {activeConsultation.consultationType !== "in_person" ? (
+                    <div className="h-44 w-full bg-zinc-950 border border-zinc-800 rounded-2xl flex flex-col justify-between p-4 relative overflow-hidden text-white">
+                      <div className="flex justify-between items-center relative z-10 w-full">
+                        <span className="text-[8px] bg-red-500 text-white font-extrabold tracking-widest px-1.5 py-0.5 rounded uppercase">Secure Video Link</span>
+                        <span className="text-[8px] text-white/80 font-bold bg-zinc-800/80 border border-white/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Laptop className="w-3 h-3 text-primary animate-pulse" /> E2E Encrypted
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold text-white/85">Patient connected via video consult</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 pointer-events-none">
+                        <div className="w-12 h-12 bg-primary/20 rounded-full border border-primary flex items-center justify-center animate-pulse">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <span className="text-[10px] font-bold text-white/85">Patient connected via video consult</span>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="h-44 w-full bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col justify-center items-center p-4 text-center">
+                      <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mb-3">
+                        <User className="w-6 h-6 text-amber-600" />
+                      </div>
+                      <h4 className="font-extrabold text-foreground tracking-tight">Patient is in the clinic</h4>
+                      <p className="text-xs text-muted-foreground font-semibold mt-1">
+                        Record clinical notes and prescribe medications below.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -689,10 +714,15 @@ export default function DoctorDashboardPage() {
                     </span>
                     <Button
                       type="submit"
+                      disabled={loading}
                       className="rounded-xl px-5 h-11 bg-primary hover:bg-primary/95 text-white font-bold text-sm shadow-lg shadow-primary/10 flex items-center gap-2 shrink-0"
                     >
-                      Compile & Dispatch
-                      <Send className="w-4 h-4 text-white" />
+                      {loading ? "Compiling..." : (
+                        <>
+                          Compile & Dispatch
+                          <Send className="w-4 h-4 text-white" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </form>
