@@ -110,7 +110,32 @@ export async function POST(request: Request) {
     }
 
     if (userMessages.length === 1 && latestUserMessage.content.trim().split(/\s+/).length < 8) {
-      const questionPayload = buildQuestion(latestUserMessage.content);
+      let questionPayload;
+      if (hasConfiguredAiProvider()) {
+        try {
+          const aiQuestion = await generateStructuredJson<{
+            question: string;
+            options: string[];
+            question_type: "chips" | "multi";
+            insight: string;
+          }>(
+            "You are a clinical triage assistant. The user provided a brief symptom description. Generate a highly relevant follow-up question to gather more clinical context. Return JSON with 'question' (string), 'options' (array of 4-6 strings), 'question_type' (must be exactly 'multi' or 'chips'), and 'insight' (short explanation string).",
+            `Symptom: ${latestUserMessage.content}`
+          );
+          questionPayload = {
+            ...aiQuestion,
+            type: "question" as const,
+            step_number: 1,
+            total_steps: 2,
+          };
+        } catch (e) {
+          console.error("Failed to generate dynamic question:", e);
+          questionPayload = buildQuestion(latestUserMessage.content);
+        }
+      } else {
+        questionPayload = buildQuestion(latestUserMessage.content);
+      }
+
       if (sessionRef) {
         await sessionRef.set(
           {

@@ -109,7 +109,24 @@ export async function POST(request: Request) {
     ];
 
     if (input.symptoms.trim().split(/\s+/).length < 8 && priorConversation.length === 0) {
-      const followUp = buildFollowUpQuestion(input.symptoms);
+      let followUp;
+      if (hasConfiguredAiProvider()) {
+        try {
+          followUp = await generateStructuredJson<{
+            question: string;
+            options: string[];
+          }>(
+            "You are a clinical triage assistant. The user provided a brief symptom description. Generate a highly relevant follow-up question to gather more clinical context. Return JSON with 'question' (string) and 'options' (array of 4-6 strings).",
+            `Symptom: ${input.symptoms}`
+          );
+        } catch (e) {
+          console.error("Failed to generate dynamic assessment question:", e);
+          followUp = buildFollowUpQuestion(input.symptoms);
+        }
+      } else {
+        followUp = buildFollowUpQuestion(input.symptoms);
+      }
+
       if (sessionRef) {
         await sessionRef.set(
           {
